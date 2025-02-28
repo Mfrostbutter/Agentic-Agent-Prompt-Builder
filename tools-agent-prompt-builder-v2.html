@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Tools Prompt Builder - Agenius</title>
+    <style>
+        :root {
+            --blue-gradient: linear-gradient(135deg, #0062ff, #0041aa);
+            --accent-pink: #ff2d92;
+            --dark-bg: #000000;
+            --card-bg: #111111;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--blue-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 7rem auto 4rem;
+            padding: 0 2rem;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 98, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #0062ff;
+            box-shadow: 0 0 0 2px rgba(0, 98, 255, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--blue-gradient);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .tool-entry {
+            display: grid;
+            grid-template-columns: 40px minmax(200px, 2fr) minmax(200px, 2fr) minmax(120px, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+
+        .task-entry, .instruction-entry, .rule-entry {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tool-entry input, .tool-entry select, .task-entry input, .instruction-entry input, .rule-entry input, .rule-entry select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .tool-entry label, .task-entry label, .instruction-entry label, .rule-entry label {
+            display: none;
+        }
+
+        .delete-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: rgba(255, 0, 0, 0.3);
+        }
+
+        .delete-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+            stroke: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .tool-entry {
+                grid-template-columns: 40px 1fr;
+                grid-template-areas: 
+                    "delete name"
+                    "delete desc"
+                    "delete select";
+                gap: 0.75rem;
+            }
+
+            .task-entry, .instruction-entry, .rule-entry {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .tool-entry .delete-btn, .task-entry .delete-btn, .instruction-entry .delete-btn, .rule-entry .delete-btn {
+                align-self: flex-start;
+            }
+
+            .container { padding: 0 1rem; }
+            .section { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="logo">AGENIUS</div>
+    </nav>
+
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 4rem;">
+            <h1 style="font-size: 3rem; margin-bottom: 1rem;">Agentic Tools Prompt Builder</h1>
+            <p style="color: var(--text-secondary); font-size: 1.2rem;">Craft prompts for AI agents with external tools</p>
+        </header>
+
+        <div class="section">
+            <p class="section-title">Agent Identity</p>
+            <p class="section-desc">Define the tool agent's identity and caller.</p>
+            <label for="tool-agent-name">Tool Agent Name:</label>
+            <input type="text" id="tool-agent-name" placeholder="e.g., ResearchBot">
+            <label for="agent-type">Agent Type:</label>
+            <input type="text" id="agent-type" placeholder="e.g., research">
+            <label for="called-by">Tool Agent Called By (main agent name):</label>
+            <input type="text" id="called-by" placeholder="e.g., MainAgent">
+        </div>
+
+        <div class="section">
+            <p class="section-title">Tasks</p>
+            <p class="section-desc">Specify the agent's objectives (add multiple if needed).</p>
+            <div id="tasks-list">
+                <div class="task-entry">
+                    <button class="delete-btn" onclick="deleteTask(this)" aria-label="Delete task">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <input type="text" placeholder="e.g., Find current market trends">
+                </div>
+            </div>
+            <button id="add-task">+ Add Task</button>
+        </div>
+
+        <div class="section">
+            <p class="section-title">Tools</p>
+            <p class="section-desc">List tools the agent can use.</p>
+            <div id="tools-list">
+                <div class="tool-entry">
+                    <button class="delete-btn" onclick="deleteTool(this)" aria-label="Delete tool">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <input type="text" placeholder="Tool name (e.g., web_search)">
+                    <input type="text" placeholder="Description (e.g., Performs a search)">
+                    <select>
+                        <option value="required">Required</option>
+                        <option value="optional">Optional</option>
+                    </select>
+                </div>
+            </div>
+            <button id="add-tool">+ Add Tool</button>
+        </div>
+
+        <div class="section">
+            <p class="section-title">Instructions</p>
+            <p class="section-desc">Provide steps for tool usage.</p>
+            <div id="instructions-list">
+                <div class="instruction-entry">
+                    <button class="delete-btn" onclick="deleteInstruction(this)" aria-label="Delete instruction">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <input type="text" placeholder="e.g., Use web_search to gather data">
+                </div>
+            </div>
+            <button id="add-instruction">+ Add Instruction</button>
+        </div>
+
+        <div class="section">
+            <p class="section-title">Rules</p>
+            <p class="section-desc">Set guardrails for the agent (Always or Never).</p>
+            <div id="rules-list">
+                <div class="rule-entry">
+                    <button class="delete-btn" onclick="deleteRule(this)" aria-label="Delete rule">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <select class="rule-type">
+                        <option value="always">Always</option>
+                        <option value="never">Never</option>
+                    </select>
+                    <input type="text" class="rule-text" placeholder="e.g., Verify sources">
+                </div>
+            </div>
+            <button id="add-rule">+ Add Rule</button>
+        </div>
+
+        <div class="section">
+            <p class="section-title">Output Format</p>
+            <p class="section-desc">Define how the response should look.</p>
+            <label for="output-format">Output Format:</label>
+            <input type="text" id="output-format" placeholder="e.g., A bullet list of key points">
+        </div>
+
+        <div class="section">
+            <p class="section-title">Error Handling</p>
+            <p class="section-desc">Specify what to do if a tool fails.</p>
+            <label for="error-handling">If a tool fails:</label>
+            <input type="text" id="error-handling" placeholder="e.g., Report the error and try again">
+        </div>
+
+        <div style="text-align: center; margin-top: 3rem;">
+            <button id="generate-prompt" style="font-size: 1.1rem; padding: 1rem 2rem;">Generate Prompt</button>
+        </div>
+
+        <div class="section" id="generated-section" style="display: none;">
+            <p class="section-title">Generated Prompt</p>
+            <textarea id="generated-prompt" rows="15" style="width: 100%;" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        const maxTasks = 10;
+        const maxTools = 6;
+        const maxInstructions = 10;
+        const maxRules = 10;
+
+        let taskCount = 1;
+        let toolCount = 1;
+        let instructionCount = 1;
+        let ruleCount = 1;
+
+        function generatePrompt() {
+            const prompt = {
+                toolAgentName: document.getElementById('tool-agent-name').value,
+                type: document.getElementById('agent-type').value,
+                calledBy: document.getElementById('called-by').value,
+                tasks: Array.from(document.getElementById('tasks-list').children).map(task => task.querySelector('input').value),
+                tools: Array.from(document.getElementById('tools-list').children).map(tool => ({
+                    name: tool.querySelector('input:nth-child(2)').value,
+                    desc: tool.querySelector('input:nth-child(3)').value,
+                    required: tool.querySelector('select').value
+                })),
+                instructions: Array.from(document.getElementById('instructions-list').children).map(instr => instr.querySelector('input').value),
+                rules: Array.from(document.getElementById('rules-list').children).map(rule => ({
+                    type: rule.querySelector('.rule-type').value,
+                    text: rule.querySelector('.rule-text').value
+                })),
+                outputFormat: document.getElementById('output-format').value,
+                errorHandling: document.getElementById('error-handling').value
+            };
+
+            const formattedPrompt = formatPrompt(prompt);
+            document.getElementById('generated-prompt').value = formattedPrompt;
+            document.getElementById('generated-section').style.display = 'block';
+        }
+
+        function formatPrompt(prompt) {
+            let text = "";
+            if (prompt.toolAgentName) text += `You are a tools agent named '${prompt.toolAgentName}'.\n`;
+            if (prompt.type) text += `Your type is '${prompt.type}'.\n`;
+            if (prompt.calledBy) text += `You will be called by '${prompt.calledBy}'.\n`;
+
+            if (prompt.tasks.length > 0 && prompt.tasks.some(t => t)) {
+                text += `\nYour tasks are:\n`;
+                prompt.tasks.forEach((t, idx) => {
+                    if (t) text += `${idx + 1}. ${t}\n`;
+                });
+            }
+
+            if (prompt.tools.length > 0 && prompt.tools.some(t => t.name)) {
+                text += `\nYou have the following tools:\n`;
+                prompt.tools.forEach(t => {
+                    if (t.name) text += `- ${t.name}: ${t.desc || ''} (${t.required})\n`;
+                });
+            }
+
+            if (prompt.instructions.length > 0 && prompt.instructions.some(i => i)) {
+                text += `\nInstructions:\n`;
+                prompt.instructions.forEach((i, idx) => {
+                    if (i) text += `${idx + 1}. ${i}\n`;
+                });
+            }
+
+            if (prompt.rules.length > 0 && prompt.rules.some(r => r.text)) {
+                text += `\nFollow these rules:`;
+                const neverRules = prompt.rules.filter(r => r.type === 'never' && r.text);
+                const alwaysRules = prompt.rules.filter(r => r.type === 'always' && r.text);
+                if (neverRules.length > 0) {
+                    text += `\n- Never:\n`;
+                    neverRules.forEach(r => text += `  - ${r.text}\n`);
+                }
+                if (alwaysRules.length > 0) {
+                    text += `- Always:\n`;
+                    alwaysRules.forEach(r => text += `  - ${r.text}\n`);
+                }
+            }
+
+            if (prompt.outputFormat) text += `\nYour response should be formatted as '${prompt.outputFormat}'.\n`;
+            if (prompt.errorHandling) text += `If a tool fails, ${prompt.errorHandling}.\n`;
+
+            return text.trim();
+        }
+
+        document.getElementById('add-task').addEventListener('click', function() {
+            if (taskCount < maxTasks) {
+                taskCount++;
+                const newTask = document.createElement('div');
+                newTask.className = 'task-entry';
+                newTask.innerHTML = `
+                    <button class="delete-btn" onclick="deleteTask(this)" aria-label="Delete task">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <input type="text" placeholder="e.g., Find current market trends">
+                `;
+                document.getElementById('tasks-list').appendChild(newTask);
+            }
+            if (taskCount === maxTasks) this.disabled = true;
+        });
+
+        function deleteTask(button) {
+            button.parentElement.remove();
+            taskCount--;
+            document.getElementById('add-task').disabled = false;
+        }
+
+        document.getElementById('add-tool').addEventListener('click', function() {
+            if (toolCount < maxTools) {
+                toolCount++;
+                const newTool = document.createElement('div');
+                newTool.className = 'tool-entry';
+                newTool.innerHTML = `
+                    <button class="delete-btn" onclick="deleteTool(this)" aria-label="Delete tool">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <input type="text" placeholder="Tool name (e.g., web_search)">
+                    <input type="text" placeholder="Description (e.g., Performs a search)">
+                    <select>
+                        <option value="required">Required</option>
+                        <option value="optional">Optional</option>
+                    </select>
+                `;
+                document.getElementById('tools-list').appendChild(newTool);
+            }
+            if (toolCount === maxTools) this.disabled = true;
+        });
+
+        function deleteTool(button) {
+            button.parentElement.remove();
+            toolCount--;
+            document.getElementById('add-tool').disabled = false;
+        }
+
+        document.getElementById('add-instruction').addEventListener('click', function() {
+            if (instructionCount < maxInstructions) {
+                instructionCount++;
+                const newInstr = document.createElement('div');
+                newInstr.className = 'instruction-entry';
+                newInstr.innerHTML = `
+                    <button class="delete-btn" onclick="deleteInstruction(this)" aria-label="Delete instruction">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <input type="text" placeholder="e.g., Use web_search to gather data">
+                `;
+                document.getElementById('instructions-list').appendChild(newInstr);
+            }
+            if (instructionCount === maxInstructions) this.disabled = true;
+        });
+
+        function deleteInstruction(button) {
+            button.parentElement.remove();
+            instructionCount--;
+            document.getElementById('add-instruction').disabled = false;
+        }
+
+        document.getElementById('add-rule').addEventListener('click', function() {
+            if (ruleCount < maxRules) {
+                ruleCount++;
+                const newRule = document.createElement('div');
+                newRule.className = 'rule-entry';
+                newRule.innerHTML = `
+                    <button class="delete-btn" onclick="deleteRule(this)" aria-label="Delete rule">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <select class="rule-type">
+                        <option value="always">Always</option>
+                        <option value="never">Never</option>
+                    </select>
+                    <input type="text" class="rule-text" placeholder="e.g., Verify sources">
+                `;
+                document.getElementById('rules-list').appendChild(newRule);
+            }
+            if (ruleCount === maxRules) this.disabled = true;
+        });
+
+        function deleteRule(button) {
+            button.parentElement.remove();
+            ruleCount--;
+            document.getElementById('add-rule').disabled = false;
+        }
+
+        document.getElementById('generate-prompt').addEventListener('click', generatePrompt);
+    </script>
+</body>
+</html>
