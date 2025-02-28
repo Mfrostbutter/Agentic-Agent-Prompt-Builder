@@ -9,7 +9,7 @@ This is an HTML-based prompt builder for creating structured prompts for AI agen
 - Generate a formatted prompt with a single click.
 
 ## Usage
-1. Open `Tools-agent-prompt-v7.html` in a web browser.
+1. Open `Tools-agent-prompt-v2.html` in a web browser.
 2. Fill in the fields for agent identity, tasks, tools, etc.
 3. Use the "Add" buttons to include multiple items where applicable.
 4. Click "Generate Prompt" to see the formatted output.
