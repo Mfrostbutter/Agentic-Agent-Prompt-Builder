@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Prompt Builder</title>
+<meta name="description" content="A free, single-file builder for well-structured AI agent prompts. Pick a preset, fill the fields, copy the prompt.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232dd4bf'/><text x='8' y='12.5' font-size='12' text-anchor='middle' fill='%2306231f' font-family='monospace' font-weight='700'>a</text></svg>">
+<style>
+  :root {
+    --bg: #0b0f14;
+    --card: #131a22;
+    --card-2: #0f161d;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --text: #e7edf3;
+    --muted: #8b97a3;
+    --accent: #2dd4bf;
+    --accent-2: #38bdf8;
+    --accent-ink: #06231f;
+    --danger: #f87171;
+    --radius: 12px;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.55; }
+  a { color: var(--accent-2); }
+
+  .nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(11,15,20,0.85);
+    backdrop-filter: blur(10px); z-index: 50;
+  }
+  .logo { font-weight: 700; letter-spacing: 0.02em; }
+  .logo .mark { color: var(--accent); }
+  .nav .links { display: flex; gap: 1rem; font-size: 0.85rem; }
+  .nav .links a { color: var(--muted); text-decoration: none; }
+  .nav .links a:hover { color: var(--text); }
+
+  .container { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+  @media (min-width: 980px) {
+    .layout { display: grid; grid-template-columns: 1fr 460px; gap: 2rem; align-items: start; }
+    .output-col { position: sticky; top: 5rem; }
+  }
+
+  header.hero { margin-bottom: 2rem; }
+  header.hero h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+  header.hero p { color: var(--muted); max-width: 60ch; }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
+    margin-bottom: 2rem; padding: 1rem; background: var(--card-2);
+    border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .toolbar .field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .toolbar label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+  .seg { display: inline-flex; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+  .seg button {
+    background: transparent; color: var(--muted); border: none; padding: 0.45rem 0.8rem;
+    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: var(--sans);
+  }
+  .seg button.active { background: var(--accent); color: var(--accent-ink); }
+
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .section-title { font-size: 1.05rem; font-weight: 650; margin-bottom: 0.25rem; }
+  .section-desc { color: var(--muted); font-size: 0.88rem; margin-bottom: 1rem; }
+  .section-desc code { background: rgba(255,255,255,0.06); padding: 0.05rem 0.35rem; border-radius: 4px; font-family: var(--mono); font-size: 0.85em; }
+  .subagent-only { display: none; }
+  body[data-mode="subagent"] .subagent-only { display: block; }
+
+  label.fl { display: block; font-size: 0.8rem; color: var(--muted); margin: 0.75rem 0 0.35rem; }
+  input, textarea, select {
+    width: 100%; padding: 0.7rem 0.85rem; border-radius: 8px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+    color: var(--text); font-size: 0.95rem; font-family: var(--sans);
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,212,191,0.15); }
+  select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%238b97a3' stroke-width='1.5' fill='none'/></svg>"); background-repeat: no-repeat; background-position: right 0.7rem center; padding-right: 2rem; }
+  /* dropdown popup is OS-rendered: force dark bg + light text so options are readable */
+  option, optgroup { background: #131a22; color: #e7edf3; }
+  optgroup { font-style: normal; font-weight: 600; }
+  textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
+  ::placeholder { color: #5c6873; }
+
+  .row { display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.6rem; }
+  .row .grow { flex: 1; }
+  .tool-row { display: grid; grid-template-columns: 1fr 1.6fr 120px auto; gap: 0.6rem; align-items: start; margin-bottom: 0.6rem; }
+  .ex-row { border: 1px dashed var(--border-strong); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.6rem; }
+  .ex-row .ex-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+  .ex-row .ex-head span { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  @media (max-width: 560px) { .tool-row { grid-template-columns: 1fr; } }
+
+  button.btn { background: var(--accent); color: var(--accent-ink); border: none; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 650; cursor: pointer; font-family: var(--sans); font-size: 0.9rem; }
+  button.btn:hover { filter: brightness(1.08); }
+  button.ghost { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); }
+  button.ghost:hover { border-color: var(--border-strong); }
+  button.add { background: transparent; color: var(--accent); border: 1px dashed var(--border-strong); padding: 0.5rem 0.9rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; font-family: var(--sans); }
+  button.add:hover { border-color: var(--accent); }
+  button.del { flex: 0 0 auto; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+  button.del:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+  .chip { font-size: 0.78rem; padding: 0.3rem 0.6rem; border-radius: 999px; background: rgba(56,189,248,0.1); color: var(--accent-2); border: 1px solid rgba(56,189,248,0.25); cursor: pointer; }
+  .chip:hover { background: rgba(56,189,248,0.2); }
+
+  .output-card { background: var(--card-2); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 1.25rem; }
+  .output-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .output-head .acts { display: flex; gap: 0.5rem; }
+  #output { width: 100%; min-height: 460px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; white-space: pre; overflow: auto; background: #0a0e13; border-color: var(--border); }
+  .hint { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: var(--accent-ink); padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; opacity: 0; transition: all 0.25s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  footer { color: var(--muted); font-size: 0.82rem; text-align: center; margin-top: 3rem; }
+</style>
+</head>
+<body data-mode="standalone">
+<nav class="nav">
+  <div class="logo"><span class="mark">[a]</span> Agent Prompt Builder</div>
+  <div class="links">
+    <a href="https://github.com/Mfrostbutter/Agentic-Agent-Prompt-Builder" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<div class="container">
+  <header class="hero">
+    <h1>Agent Prompt Builder</h1>
+    <p>A structured prompt is the difference between an agent that wanders and one that does the job. Pick a starting preset, fill in the parts you need, and copy a clean, well-organized prompt. Nothing is sent anywhere; everything runs in your browser.</p>
+  </header>
+
+  <div class="toolbar">
+    <div class="field">
+      <label>Mode</label>
+      <div class="seg" id="mode-seg">
+        <button data-mode="standalone" class="active" type="button">Standalone agent</button>
+        <button data-mode="subagent" type="button">Tool sub-agent</button>
+      </div>
+    </div>
+    <div class="field grow" style="flex:1; min-width:200px;">
+      <label for="preset">Start from a preset</label>
+      <select id="preset">
+        <option value="">— Blank —</option>
+        <optgroup label="Research &amp; analysis">
+          <option value="research">Research agent</option>
+          <option value="summarizer">Document summarizer</option>
+        </optgroup>
+        <optgroup label="Writing">
+          <option value="social">Social media copywriter</option>
+          <option value="seo">SEO blog writer</option>
+          <option value="outreach">Cold outreach emailer</option>
+        </optgroup>
+        <optgroup label="Code">
+          <option value="coding">Coding assistant</option>
+          <option value="reviewer">Code reviewer</option>
+        </optgroup>
+        <optgroup label="Data">
+          <option value="extract">Data extraction agent</option>
+          <option value="analyst">SQL data analyst</option>
+        </optgroup>
+        <optgroup label="Support">
+          <option value="support">Customer support agent</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="field" style="align-self:flex-end;">
+      <button class="ghost" id="reset-btn" type="button">Clear all</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="form-col">
+
+      <div class="section">
+        <p class="section-title">Identity</p>
+        <p class="section-desc">Give the agent a name and a clear role. The role is the single most load-bearing line in the prompt.</p>
+        <label class="fl" for="name">Agent name</label>
+        <input type="text" id="name" placeholder="e.g. ResearchBot">
+        <label class="fl" for="role">Role / persona</label>
+        <input type="text" id="role" placeholder="e.g. a meticulous market-research analyst">
+        <div class="subagent-only">
+          <label class="fl" for="atype">Agent type</label>
+          <input type="text" id="atype" placeholder="e.g. research">
+          <label class="fl" for="calledby">Invoked by (orchestrator name)</label>
+          <input type="text" id="calledby" placeholder="e.g. MainAgent">
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Objective</p>
+        <p class="section-desc">What is this agent for? List one or more concrete tasks. Be specific about the end state.</p>
+        <div id="tasks-list"></div>
+        <button class="add" data-add="task" type="button">+ Add task</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Capabilities &amp; tools <span style="font-weight:400;color:var(--muted);font-size:0.8rem;">(optional)</span></p>
+        <p class="section-desc">List the tools the agent can call. Use <code>snake_case</code> names that match your real tool definitions. Marking a tool required tells the model it should not finish without using it.</p>
+        <div id="tools-list"></div>
+        <button class="add" data-add="tool" type="button">+ Add tool</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Workflow</p>
+        <p class="section-desc">The step-by-step process the agent should follow. Ordered steps beat a wall of prose.</p>
+        <div id="steps-list"></div>
+        <button class="add" data-add="step" type="button">+ Add step</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Rules</p>
+        <p class="section-desc">Hard guardrails. Keep them short and absolute. <em>Always</em> and <em>Never</em> rules are easier for a model to follow than soft suggestions.</p>
+        <div id="rules-list"></div>
+        <button class="add" data-add="rule" type="button">+ Add rule</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Output format</p>
+        <p class="section-desc">Tell the agent exactly how to shape its final answer. A precise contract here is what makes the output parseable and predictable.</p>
+        <textarea id="output-format" placeholder="e.g. A markdown report with sections: Summary, Findings (bulleted), Sources (linked)."></textarea>
+        <div class="chips" id="format-chips">
+          <span class="chip" data-fill="A bullet list of the key points, most important first.">Bullet list</span>
+          <span class="chip" data-fill="A single JSON object. Output only valid JSON, no prose.">JSON object</span>
+          <span class="chip" data-fill="A short markdown report with clear section headers.">Markdown report</span>
+          <span class="chip" data-fill="One concise paragraph, no preamble.">Concise prose</span>
+          <span class="chip" data-fill="A markdown table with one row per item.">Table</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Examples <span style="font-weight:400;color:var(--muted);font-size:0.8rem;">(optional, recommended)</span></p>
+        <p class="section-desc">One or two worked examples teach the model more than a paragraph of instructions. Show an input and the ideal output.</p>
+        <div id="examples-list"></div>
+        <button class="add" data-add="example" type="button">+ Add example</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Error handling</p>
+        <p class="section-desc">What the agent should do when a tool fails or returns nothing useful.</p>
+        <input type="text" id="error-handling" placeholder="e.g. report the error, do not invent a result, and try one alternative approach">
+      </div>
+
+    </div>
+
+    <div class="output-col">
+      <div class="output-card">
+        <div class="output-head">
+          <p class="section-title">Generated prompt</p>
+          <div class="acts">
+            <button class="ghost" id="copy-btn" type="button">Copy</button>
+            <button class="ghost" id="download-btn" type="button">Download .md</button>
+          </div>
+        </div>
+        <textarea id="output" readonly spellcheck="false"></textarea>
+        <p class="hint">Updates live as you type. Your work is saved in this browser automatically.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Free and open source &middot; MIT &middot; built by <a href="https://github.com/Mfrostbutter" target="_blank" rel="noopener">Agenius AI Labs</a>
+  </footer>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<script>
+"use strict";
+
+// ---------- dynamic list rows ----------
+const lists = {
+  task:    { el: () => document.getElementById('tasks-list'),    max: 12 },
+  tool:    { el: () => document.getElementById('tools-list'),    max: 10 },
+  step:    { el: () => document.getElementById('steps-list'),    max: 15 },
+  rule:    { el: () => document.getElementById('rules-list'),    max: 15 },
+  example: { el: () => document.getElementById('examples-list'), max: 5  },
+};
+
+function rowMarkup(kind, data = {}) {
+  const v = (s) => (s == null ? '' : String(s).replace(/"/g, '&quot;'));
+  switch (kind) {
+    case 'task':
+      return `<div class="row" data-kind="task">
+        <input class="grow" data-f="text" type="text" placeholder="e.g. Find the top 5 competitors and summarize their pricing" value="${v(data.text)}">
+        <button class="del" type="button" aria-label="Remove">&times;</button></div>`;
+    case 'tool':
+      return `<div class="tool-row" data-kind="tool">
+        <input data-f="name" type="text" placeholder="web_search" value="${v(data.name)}">
+        <input data-f="desc" type="text" placeholder="search the web for a query" value="${v(data.desc)}">
+        <select data-f="req"><option value="required"${data.req==='required'?' selected':''}>Required</option><option value="optional"${data.req!=='required'?' selected':''}>Optional</option></select>
+        <button class="del" type="button" aria-label="Remove">&times;</button></div>`;
+    case 'step':
+      return `<div class="row" data-kind="step">
+        <input class="grow" data-f="text" type="text" placeholder="e.g. Call web_search, then read the top results before answering" value="${v(data.text)}">
+        <button class="del" type="button" aria-label="Remove">&times;</button></div>`;
+    case 'rule':
+      return `<div class="row" data-kind="rule">
+        <select data-f="type" style="flex:0 0 110px;"><option value="always"${data.type!=='never'?' selected':''}>Always</option><option value="never"${data.type==='never'?' selected':''}>Never</option></select>
+        <input class="grow" data-f="text" type="text" placeholder="e.g. cite a source for every claim" value="${v(data.text)}">
+        <button class="del" type="button" aria-label="Remove">&times;</button></div>`;
+    case 'example':
+      return `<div class="ex-row" data-kind="example">
+        <div class="ex-head"><span>Example</span><button class="del" type="button" aria-label="Remove">&times;</button></div>
+        <textarea data-f="input" placeholder="Input / situation" style="min-height:56px;">${v(data.input)}</textarea>
+        <textarea data-f="output" placeholder="Ideal output" style="min-height:56px;margin-top:0.4rem;">${v(data.output)}</textarea>
+      </div>`;
+  }
+}
+
+function addRow(kind, data) {
+  const cfg = lists[kind];
+  const container = cfg.el();
+  if (container.children.length >= cfg.max) return;
+  container.insertAdjacentHTML('beforeend', rowMarkup(kind, data));
+}
+
+function ensureOne(kind) { if (lists[kind].el().children.length === 0) addRow(kind); }
+
+// ---------- read form state ----------
+function readState() {
+  const get = (id) => document.getElementById(id).value.trim();
+  const rows = (kind) => Array.from(lists[kind].el().children).map(row => {
+    const o = {};
+    row.querySelectorAll('[data-f]').forEach(f => o[f.dataset.f] = f.value.trim());
+    return o;
+  });
+  return {
+    mode: document.body.dataset.mode,
+    name: get('name'),
+    role: get('role'),
+    atype: get('atype'),
+    calledby: get('calledby'),
+    tasks: rows('task').map(r => r.text).filter(Boolean),
+    tools: rows('tool').filter(r => r.name),
+    steps: rows('step').map(r => r.text).filter(Boolean),
+    rules: rows('rule').filter(r => r.text),
+    examples: rows('example').filter(r => r.input || r.output),
+    outputFormat: get('output-format'),
+    errorHandling: get('error-handling'),
+  };
+}
+
+// ---------- build the prompt ----------
+function buildPrompt(s) {
+  const out = [];
+  const name = s.name || 'the agent';
+
+  // Role
+  out.push('# Role');
+  if (s.mode === 'subagent') {
+    let line = `You are \`${name}\``;
+    if (s.atype) line += `, a ${s.atype} sub-agent`;
+    line += '.';
+    if (s.calledby) line += ` You are invoked by \`${s.calledby}\` to complete a focused task and return the result.`;
+    if (s.role) line += ` Act as ${s.role}.`;
+    out.push(line);
+  } else {
+    let line = `You are ${name}`;
+    if (s.role) line += `, ${s.role}`;
+    line += '.';
+    out.push(line);
+  }
+
+  // Objective
+  if (s.tasks.length) {
+    out.push('\n# Objective');
+    if (s.tasks.length === 1) {
+      out.push(s.tasks[0]);
+    } else {
+      s.tasks.forEach((t, i) => out.push(`${i + 1}. ${t}`));
+    }
+  }
+
+  // Capabilities
+  if (s.tools.length) {
+    out.push('\n# Capabilities');
+    out.push('You have access to the following tools:');
+    s.tools.forEach(t => {
+      let l = `- \`${t.name}\``;
+      if (t.desc) l += ` — ${t.desc}`;
+      l += t.req === 'required' ? ' *(required)*' : ' *(optional)*';
+      out.push(l);
+    });
+  }
+
+  // Workflow
+  if (s.steps.length) {
+    out.push('\n# Workflow');
+    s.steps.forEach((st, i) => out.push(`${i + 1}. ${st}`));
+  }
+
+  // Rules
+  if (s.rules.length) {
+    out.push('\n# Rules');
+    const always = s.rules.filter(r => r.type !== 'never').map(r => r.text);
+    const never = s.rules.filter(r => r.type === 'never').map(r => r.text);
+    if (always.length) { out.push('**Always:**'); always.forEach(r => out.push(`- ${r}`)); }
+    if (never.length)  { out.push((always.length ? '\n' : '') + '**Never:**'); never.forEach(r => out.push(`- ${r}`)); }
+  }
+
+  // Output format
+  if (s.outputFormat) {
+    out.push('\n# Output format');
+    out.push(s.outputFormat);
+  }
+
+  // Examples
+  if (s.examples.length) {
+    out.push('\n# Examples');
+    s.examples.forEach(ex => {
+      out.push('<example>');
+      if (ex.input)  out.push(`<input>\n${ex.input}\n</input>`);
+      if (ex.output) out.push(`<output>\n${ex.output}\n</output>`);
+      out.push('</example>');
+    });
+  }
+
+  // Error handling
+  if (s.errorHandling) {
+    out.push('\n# Error handling');
+    out.push(`If a tool call fails or returns nothing useful, ${s.errorHandling}.`);
+  }
+
+  return out.join('\n').trim();
+}
+
+// ---------- render / persist ----------
+const STORE_KEY = 'agent-prompt-builder-v3';
+
+function render() {
+  const s = readState();
+  document.getElementById('output').value = buildPrompt(s);
+  save(s);
+}
+
+function save(s) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {}
+}
+
+function loadState(s) {
+  setMode(s.mode || 'standalone');
+  document.getElementById('name').value = s.name || '';
+  document.getElementById('role').value = s.role || '';
+  document.getElementById('atype').value = s.atype || '';
+  document.getElementById('calledby').value = s.calledby || '';
+  document.getElementById('output-format').value = s.outputFormat || '';
+  document.getElementById('error-handling').value = s.errorHandling || '';
+
+  Object.keys(lists).forEach(k => lists[k].el().innerHTML = '');
+  (s.tasks || []).forEach(t => addRow('task', { text: t }));
+  (s.tools || []).forEach(t => addRow('tool', t));
+  (s.steps || []).forEach(t => addRow('step', { text: t }));
+  (s.rules || []).forEach(r => addRow('rule', r));
+  (s.examples || []).forEach(e => addRow('example', e));
+
+  ['task','tool','step','rule','example'].forEach(ensureOne);
+}
+
+function setMode(mode) {
+  document.body.dataset.mode = mode;
+  document.querySelectorAll('#mode-seg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+// ---------- presets ----------
+const PRESETS = {
+  research: {
+    mode: 'standalone', name: 'ResearchBot', role: 'a meticulous research analyst',
+    tasks: ['Answer the user\'s research question with verified, current information.'],
+    tools: [
+      { name: 'web_search', desc: 'search the web for a query', req: 'required' },
+      { name: 'fetch_page', desc: 'retrieve and read a specific URL', req: 'optional' },
+    ],
+    steps: [
+      'Break the question into the key sub-questions you need to answer.',
+      'Use web_search to gather sources, then read the most relevant ones.',
+      'Cross-check any important claim against at least two independent sources.',
+      'Synthesize the findings into the requested output format.',
+    ],
+    rules: [
+      { type: 'always', text: 'cite a source URL for every factual claim' },
+      { type: 'never', text: 'present unverified information as fact' },
+      { type: 'never', text: 'invent a source or a quote' },
+    ],
+    outputFormat: 'A markdown report with sections: Summary, Findings (bulleted), Sources (linked).',
+    examples: [],
+    errorHandling: 'note which sources were unavailable and answer with what you could verify, flagging the gaps',
+  },
+  coding: {
+    mode: 'standalone', name: 'CodeAssistant', role: 'a senior software engineer',
+    tasks: ['Implement the requested change correctly and minimally, matching the existing code style.'],
+    tools: [
+      { name: 'read_file', desc: 'read a file from the repo', req: 'required' },
+      { name: 'edit_file', desc: 'apply an edit to a file', req: 'required' },
+      { name: 'run_tests', desc: 'run the test suite', req: 'optional' },
+    ],
+    steps: [
+      'Read the relevant files before changing anything.',
+      'Make the smallest change that fully solves the problem.',
+      'Run the tests and fix any failures you introduced.',
+      'Summarize what you changed and why.',
+    ],
+    rules: [
+      { type: 'always', text: 'match the surrounding code style and conventions' },
+      { type: 'never', text: 'leave the build or tests broken' },
+      { type: 'never', text: 'add dependencies without saying so' },
+    ],
+    outputFormat: 'A short summary of the change, then the diff.',
+    examples: [],
+    errorHandling: 'report the failing command and its output, and do not claim success',
+  },
+  support: {
+    mode: 'standalone', name: 'SupportAgent', role: 'a calm, helpful customer support specialist',
+    tasks: ['Resolve the customer\'s issue, or escalate cleanly if you cannot.'],
+    tools: [
+      { name: 'lookup_order', desc: 'fetch order details by order ID', req: 'optional' },
+      { name: 'create_ticket', desc: 'open a support ticket for a human agent', req: 'optional' },
+    ],
+    steps: [
+      'Acknowledge the issue and confirm you understand it.',
+      'Look up any account or order details you need.',
+      'Resolve the issue directly if you can.',
+      'If you cannot resolve it, create a ticket and tell the customer what happens next.',
+    ],
+    rules: [
+      { type: 'always', text: 'stay polite and concise' },
+      { type: 'never', text: 'promise a refund or policy exception you are not authorized to give' },
+      { type: 'never', text: 'share another customer\'s information' },
+    ],
+    outputFormat: 'A friendly reply to the customer, no internal notes.',
+    examples: [],
+    errorHandling: 'apologize for the delay and escalate to a human via create_ticket',
+  },
+  extract: {
+    mode: 'subagent', name: 'Extractor', role: 'a precise data-extraction engine', atype: 'extraction', calledby: 'MainAgent',
+    tasks: ['Extract the requested fields from the input text and return them as structured data.'],
+    tools: [],
+    steps: [
+      'Read the full input before extracting.',
+      'Pull each requested field exactly as it appears; do not paraphrase.',
+      'Use null for any field that is genuinely absent.',
+    ],
+    rules: [
+      { type: 'always', text: 'output valid JSON and nothing else' },
+      { type: 'never', text: 'guess or fabricate a value that is not present' },
+    ],
+    outputFormat: 'A single JSON object with the requested keys. Output only the JSON, no prose or code fences.',
+    examples: [
+      { input: 'Invoice #4471, billed to Acme Corp, total $1,250.00, due 2025-03-01.', output: '{"invoice_number": "4471", "customer": "Acme Corp", "total": "1250.00", "due_date": "2025-03-01"}' },
+    ],
+    errorHandling: 'return the JSON with null for fields you could not find rather than omitting them',
+  },
+  social: {
+    mode: 'standalone', name: 'CopyBot', role: 'a sharp social media copywriter who writes scroll-stopping, on-brand posts',
+    tasks: ['Write social posts that match the brand voice and drive the requested action, tailored to the target platform.'],
+    tools: [],
+    steps: [
+      'Confirm the platform, the goal (engagement, clicks, signups), and the brand voice before writing.',
+      'Open with a hook in the first line; assume the reader never taps "see more".',
+      'Keep one idea per post and end with a single, clear call to action.',
+      'Provide two or three variations with different angles so the user can choose.',
+    ],
+    rules: [
+      { type: 'always', text: 'match the requested brand voice and reading level' },
+      { type: 'always', text: 'respect each platform\'s norms and length limits' },
+      { type: 'never', text: 'use more than two or three relevant hashtags' },
+      { type: 'never', text: 'use hype words or clichés like "game-changer" or "revolutionary"' },
+    ],
+    outputFormat: 'For each variation, give the post text followed by a one-line note on the angle. Label them 1, 2, 3.',
+    examples: [],
+    errorHandling: '',
+  },
+  seo: {
+    mode: 'standalone', name: 'BlogWriter', role: 'an SEO content writer who writes clear, genuinely useful articles',
+    tasks: ['Write a well-structured article on the given topic that targets the keyword and is actually worth reading.'],
+    tools: [
+      { name: 'web_search', desc: 'find current facts and sources', req: 'optional' },
+    ],
+    steps: [
+      'Confirm the target keyword, the audience, and the desired length.',
+      'Outline the article with H2 and H3 headings before writing the body.',
+      'Write in plain language and use the keyword naturally, never forced.',
+      'Add a short intro that states what the reader will learn and a conclusion with a next step.',
+    ],
+    rules: [
+      { type: 'always', text: 'write for the reader first and the search engine second' },
+      { type: 'always', text: 'back factual claims with a source' },
+      { type: 'never', text: 'keyword-stuff or pad the word count with filler' },
+    ],
+    outputFormat: 'A markdown article: an H1 title, a one-line meta description, then H2/H3 sections.',
+    examples: [],
+    errorHandling: 'write from general knowledge and clearly flag any claim that should be checked against a current source',
+  },
+  outreach: {
+    mode: 'standalone', name: 'OutreachWriter', role: 'a concise B2B copywriter who writes cold emails people actually reply to',
+    tasks: ['Write a short cold outreach email to the described prospect that earns a reply.'],
+    tools: [],
+    steps: [
+      'Confirm who the prospect is, what they care about, and the single action you want them to take.',
+      'Open with a specific, relevant observation, not a generic compliment.',
+      'State the value in one or two sentences and make one clear, low-friction ask.',
+      'Keep it under 120 words and write a separate subject line.',
+    ],
+    rules: [
+      { type: 'always', text: 'lead with the prospect\'s problem, not your product' },
+      { type: 'always', text: 'keep it under 120 words with one call to action' },
+      { type: 'never', text: 'use fake personalization or invented details about the prospect' },
+      { type: 'never', text: 'make claims or promises you cannot back up' },
+    ],
+    outputFormat: 'A subject line, then the email body. Offer one alternative subject line at the end.',
+    examples: [],
+    errorHandling: '',
+  },
+  reviewer: {
+    mode: 'standalone', name: 'ReviewBot', role: 'a senior engineer doing a focused, practical code review',
+    tasks: ['Review the provided diff and report real issues, prioritized by severity.'],
+    tools: [
+      { name: 'read_file', desc: 'read surrounding code for context', req: 'optional' },
+    ],
+    steps: [
+      'Read the diff and enough surrounding code to understand the change.',
+      'Look for correctness bugs first, then security issues, then maintainability.',
+      'For each finding, point to the exact location and explain why it matters.',
+      'Suggest a concrete fix, not just a complaint.',
+    ],
+    rules: [
+      { type: 'always', text: 'separate blocking issues from nice-to-haves' },
+      { type: 'always', text: 'cite the file and line for each finding' },
+      { type: 'never', text: 'rewrite the whole change in your own preferred style' },
+      { type: 'never', text: 'flag a style preference as if it were a bug' },
+    ],
+    outputFormat: 'Findings grouped by severity (Blocking, Should fix, Nit). Each item: location, problem, suggested fix.',
+    examples: [],
+    errorHandling: 'say which files you could not see and review only the code you were given',
+  },
+  analyst: {
+    mode: 'standalone', name: 'DataAnalyst', role: 'a careful data analyst who writes correct SQL and explains the result',
+    tasks: ['Answer the user\'s question about the data by writing and running a SQL query.'],
+    tools: [
+      { name: 'list_tables', desc: 'list tables and columns in the database', req: 'optional' },
+      { name: 'run_query', desc: 'execute a read-only SQL query', req: 'required' },
+    ],
+    steps: [
+      'Inspect the schema with list_tables before writing any query.',
+      'Write a single, readable query that answers the question.',
+      'Run it, then explain in plain language what the result means.',
+    ],
+    rules: [
+      { type: 'always', text: 'write read-only queries (SELECT only)' },
+      { type: 'always', text: 'state any assumptions you made about the data' },
+      { type: 'never', text: 'run a query that modifies or deletes data' },
+      { type: 'never', text: 'present a number without saying what it counts' },
+    ],
+    outputFormat: 'The SQL query in a code block, then a plain-language answer to the question.',
+    examples: [],
+    errorHandling: 'show the database error, correct the query, and try once more',
+  },
+  summarizer: {
+    mode: 'standalone', name: 'Summarizer', role: 'a precise summarizer who keeps the meaning and drops the noise',
+    tasks: ['Summarize the provided document at the requested length without losing the key points.'],
+    tools: [],
+    steps: [
+      'Read the whole document before summarizing.',
+      'Identify the main argument and the few supporting points that matter.',
+      'Write the summary at the requested length and the reader\'s likely level of expertise.',
+    ],
+    rules: [
+      { type: 'always', text: 'preserve the author\'s actual meaning and intent' },
+      { type: 'never', text: 'add information or opinions that are not in the source' },
+      { type: 'never', text: 'keep minor details at the expense of the main point' },
+    ],
+    outputFormat: 'A 3-5 sentence summary, then the key points as a short bullet list.',
+    examples: [],
+    errorHandling: '',
+  },
+};
+
+// ---------- wiring ----------
+function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+const renderDebounced = debounce(render, 120);
+
+document.addEventListener('input', renderDebounced);
+document.addEventListener('change', render);
+
+// add / delete buttons
+document.addEventListener('click', (e) => {
+  const add = e.target.closest('[data-add]');
+  if (add) { addRow(add.dataset.add); render(); return; }
+  const del = e.target.closest('.del');
+  if (del) {
+    const row = del.closest('[data-kind]');
+    const kind = row.dataset.kind;
+    row.remove();
+    ensureOne(kind);
+    render();
+    return;
+  }
+  const chip = e.target.closest('.chip');
+  if (chip) { document.getElementById('output-format').value = chip.dataset.fill; render(); return; }
+});
+
+// mode toggle
+document.getElementById('mode-seg').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-mode]');
+  if (b) { setMode(b.dataset.mode); render(); }
+});
+
+// presets
+document.getElementById('preset').addEventListener('change', (e) => {
+  const p = PRESETS[e.target.value];
+  if (p) { loadState(JSON.parse(JSON.stringify(p))); render(); }
+});
+
+// clear
+document.getElementById('reset-btn').addEventListener('click', () => {
+  loadState({ mode: document.body.dataset.mode });
+  document.getElementById('preset').value = '';
+  render();
+});
+
+// copy
+document.getElementById('copy-btn').addEventListener('click', async () => {
+  const text = document.getElementById('output').value;
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const o = document.getElementById('output'); o.select(); document.execCommand('copy'); }
+  toast('Copied to clipboard');
+});
+
+// download
+document.getElementById('download-btn').addEventListener('click', () => {
+  const text = document.getElementById('output').value;
+  const name = (readState().name || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'agent';
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${name}-prompt.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+// ---------- init ----------
+(function init() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) {}
+  if (saved && (saved.name || saved.tasks?.length || saved.tools?.length)) {
+    loadState(saved);
+  } else {
+    loadState({ mode: 'standalone' });
+  }
+  render();
+})();
+</script>
+</body>
+</html>
